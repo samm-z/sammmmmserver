@@ -1,4 +1,4 @@
-// server.js (简化版 - 仅实时聊天，无数据库/无认证)
+// server.js (最终修正版本 - 简单聊天 + 云部署兼容)
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
@@ -8,18 +8,17 @@ const path = require('path');
 // 存储在线用户列表 { socketId: username }
 const onlineUsers = {};
 
-// 默认路由：返回 index.html 文件
+// 默认路由：返回 index.html 文件 (解决 404 错误的关键)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 监听 Socket.IO 连接
 io.on('connection', (socket) => {
-    let currentUsername = null; // 用户未连接时为 null
+    let currentUsername = null; 
 
     // 接收新用户上线事件 (客户端在“登录”后发送)
     socket.on('new user', (username) => {
-        // 确保用户名非空，并且该 socketID 尚未被分配用户名
         if (!username || onlineUsers[socket.id]) return; 
 
         currentUsername = username;
@@ -27,25 +26,19 @@ io.on('connection', (socket) => {
         
         console.log(`用户 ${currentUsername} (${socket.id}) 已连接`);
         
-        // 广播有人上线
         socket.broadcast.emit('user connected', currentUsername);
-        
-        // 广播最新的在线用户列表给所有连接者
         io.emit('online users', Object.values(onlineUsers));
     });
 
     // 接收并广播聊天消息
     socket.on('chat message', (msgData) => {
-        // 只有已注册/登录的用户才能发送消息
         if (!currentUsername) return;
 
-        // 服务器端重新附加用户名和时间戳，确保数据一致
         msgData.user = currentUsername;
         msgData.timestamp = new Date().toISOString(); 
         
         console.log(`[${msgData.user}]: ${msgData.text}`);
         
-        // 广播给所有连接的用户 (包括发送者自己)
         io.emit('chat message', msgData); 
     });
 
@@ -63,9 +56,14 @@ io.on('connection', (socket) => {
     });
 });
 
-// 启动服务器
-const PORT = 3000;
+// ----------------------------------------------------
+// 🚨 关键修正：使用 process.env.PORT 以兼容云部署环境
+// ----------------------------------------------------
+
+const PORT = process.env.PORT || 3000;
+
 http.listen(PORT, () => {
-    console.log(`🚀 服务器已在 http://localhost:${PORT} 运行`);
+    // 这里的 console.log 不再硬编码 http://localhost:3000
+    console.log(`🚀 服务器已在端口 ${PORT} 运行`); 
     console.log(`➡️ 请在浏览器中输入昵称登录`);
 });
