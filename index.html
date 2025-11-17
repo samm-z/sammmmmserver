@@ -1,508 +1,561 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket.IO 聊天室 - 基础版</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>poSter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
-        /* ==================== CSS 样式 ==================== */
         body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
             margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            background-color: #f4f7fc;
             color: #333;
-            overflow: hidden; /* 防止滚动条出现 */
+            font-family: 'Open Sans', sans-serif;
+        }
+        /* --- Initial Fade-in Animation Preparation --- */
+        .title, .login-button, .login-div p {
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+            transform: translateY(10px); 
+        }
+        
+        .title {
+            font-size: clamp(80px, 15vw, 250px); 
+            font-family: 'Playfair Display', serif; 
+            text-align: center;
+            margin: 15vh auto 50px auto; 
+            color: #62a8a8; 
+            text-shadow: 0 4px 8px rgba(111, 199, 199, 0.3); 
         }
 
-        /* --- 登录界面 --- */
-        #login-overlay {
+        .login-div{
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: auto; 
+        }
+
+        .login-div p {
+            margin-top: 15px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .login-button {
+            font-family: 'Open Sans', Arial, sans-serif;
+            width: 200px;
+            height: 65px;
+            border-radius: 35px;
+            font-size: 18px; 
+            display: block;
+            margin: 0 auto 5px auto;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            color: #ffffff;
+            background-color: #62a8a8;
+            font-weight: 700;
+            
+            box-shadow: 0 8px 20px rgba(111, 199, 199, 0.5);
+        }
+
+        .login-button:hover {
+            background-color: #81c9c9;
+            box-shadow: 0 10px 25px rgba(111, 199, 199, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .login-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .bottom {
+            font-family: 'Open Sans', sans-serif;
+            margin-top: auto;
+            text-align: center;
+            padding: 15px 0;
+            font-size: 14px;
+
+            color: #888;
+            font-weight: 400;
+        }
+
+        /* --- Modal Styles --- */
+
+        #modal-wrapper {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: rgba(0, 0, 0, 0.6);
             z-index: 1000;
+            display: none;
+            pointer-events: none; 
         }
 
-        #login-box {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-            text-align: center;
+        #login-modal {
+            position: absolute;
+            width: 350px;
+            height: 450px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            text-align: center; 
+
+            top: 50%;
+            left: 50%;
+            
+            /* Initial state for animation */
+            opacity: 0; 
+            transform: translate(-50%, -40%);
+
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out; 
+            
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
         }
 
-        #login-box input {
-            padding: 12px;
+        .login-signup {
+            font-family: 'Playfair Display', serif;
+            color: #62a8a8;
+            font-size: 35px;
+            margin: 0 0 10px 0;
+        }
+        
+        #close-modal-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            font-weight: bold;
+            line-height: 20px;
+            transition: color 0.2s;
+        }
+        #close-modal-btn:hover {
+            color: #333;
+        }
+
+        /* --- Form and Tab Styles --- */
+        .tab-controls {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #888;
+            font-weight: 700;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: #62a8a8;
+            border-bottom: 3px solid #62a8a8;
+        }
+
+        .tab-content {
+            flex-grow: 1; 
+            position: relative;
+            overflow: hidden; 
+        }
+
+        /* Styles for form pop-off transition */
+        .tab-content form {
+            position: absolute;
+            width: 100%;
+            top: 0;
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            padding-right: 2px; 
+            transform-origin: center center;
+            /* FIX 1: Add transition for z-index (for smooth pointer-events handling) */
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out, z-index 0s 0.4s, pointer-events 0s 0.4s;
+        }
+
+        /* FIX 2: Set default z-index and pointer-events for hidden forms */
+        #login-form {
+            z-index: 10; /* Login form is active by default */
+            pointer-events: auto;
+        }
+
+        #signup-form {
+            z-index: 5; /* Signup form is hidden by default */
+            pointer-events: none;
+        }
+
+        /* When a form is visually hidden, remove its click/input capability */
+        .tab-content form[style*="opacity: 0"] {
+            pointer-events: none;
+        }
+
+        .form-group {
             margin-bottom: 15px;
-            width: 250px;
+            text-align: left;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
-            transition: border-color 0.3s;
+            box-sizing: border-box;
+            font-size: 15px;
         }
-        #login-box input:focus {
-            border-color: #007bff;
-            outline: none;
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
         }
 
-        #login-box button {
-            padding: 12px 25px;
-            background-color: #007bff;
-            color: white;
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-
-        #login-box button:hover {
-            background-color: #0056b3;
-        }
-
-        /* --- 聊天主界面 --- */
-        #chat-container {
-            display: flex;
-            height: 100vh;
-        }
-
-        #sidebar {
-            width: 250px;
-            background-color: #e9ecef;
-            padding: 15px;
-            border-right: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        #sidebar h3 {
-            margin-top: 0;
-            color: #495057;
-        }
-
-        #online-users {
-            list-style: none;
-            padding: 0;
-            margin-top: 10px;
-        }
-
-        #online-users li {
-            padding: 8px 5px;
-            margin-bottom: 2px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            border-radius: 4px;
-        }
-
-        #online-users li:not(.user-self):hover {
-            background-color: #d8e0e7;
-        }
-
-        .user-self {
-            font-weight: bold;
-            color: #28a745; 
-        }
-        
-        .user-selected {
-            background-color: #007bff !important;
+            font-size: 17px;
+            font-weight: 700;
             color: white;
-            font-weight: bold;
-        }
-
-        #main-chat {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #messages {
-            flex-grow: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background-color: #fff;
-            line-height: 1.6;
-        }
-
-        #message-form {
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #ddd;
-            display: flex;
-        }
-
-        #message-input {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-right: 10px;
+            background-color: #62a8a8;
+            margin-top: 15px;
             transition: background-color 0.3s;
         }
 
-        #message-form button {
-            padding: 12px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        #message-form button:hover {
-            background-color: #1e7e34;
-        }
-
-        /* --- 消息样式 --- */
-        .message-item {
-            margin-bottom: 10px;
-        }
-
-        .message-user {
-            font-weight: bold;
-            margin-right: 8px;
-        }
-
-        .system-message {
-            text-align: center;
-            color: #dc3545; /* 使用红色表示系统通知，更醒目 */
-            font-style: italic;
-            border-bottom: 1px dashed #ced4da;
-            padding-bottom: 5px;
-            margin-bottom: 15px !important;
-        }
-
-        .private-message .message-user, 
-        .private-message .message-text {
-            color: #dc3545; /* 红色标识私聊 */
+        .submit-btn:hover {
+            background-color: #81c9c9;
         }
         
-        .private-tag {
-            font-size: 0.8em;
-            color: white;
-            background-color: #dc3545;
-            padding: 2px 5px;
-            border-radius: 3px;
-            margin-left: 5px;
+        .message {
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
         }
-
     </style>
 </head>
 <body>
+    
+    <h1 class="title" id="main-title">poSter</h1>
 
-    <div id="login-overlay">
-        <div id="login-box">
-            <h2>欢迎加入聊天室</h2>
-            <input id="username-input" type="text" placeholder="输入你的昵称..." required>
-            <button id="login-button">进入聊天</button>
-            <p id="login-error" style="color: red; margin-top: 10px; min-height: 20px;"></p>
-            <p id="socket-status" style="color: #6c757d; font-size: 0.9em;">等待连接服务器...</p>
-        </div>
+    <div class="login-div">
+        <button class="login-button" id="login-btn">LOGIN / SIGN UP</button>
+        <p id="login-text">Join the best secure community and share your moments!</p>
     </div>
 
-    <div id="chat-container" style="display: none;">
-        
-        <div id="sidebar">
-            <h3 id="current-chat-title">当前：公共聊天室</h3>
-            <p style="font-size: 0.9em; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
-                在线用户 (<span id="user-count">0</span>):
-            </p>
-            <ul id="online-users">
-                </ul>
-        </div>
+    <p class="bottom">Copyright Sam Zhang 2025 beta 0.3</p>
 
-        <div id="main-chat">
-            <div id="messages">
-                </div>
-            <form id="message-form">
-                <input id="message-input" autocomplete="off" placeholder="输入消息..." required />
-                <button type="submit">发送</button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        // 尝试连接 Socket.IO
-        const socket = io(); 
-        let currentUsername = ''; // 当前登录的用户名
-        let currentRecipient = null; // 当前私聊对象 (null 表示公共聊天)
-
-        // DOM 元素引用
-        const loginOverlay = document.getElementById('login-overlay');
-        const loginButton = document.getElementById('login-button');
-        const usernameInput = document.getElementById('username-input');
-        const loginError = document.getElementById('login-error');
-        const socketStatus = document.getElementById('socket-status');
-
-        const chatContainer = document.getElementById('chat-container');
-        const messageForm = document.getElementById('message-form');
-        const messageInput = document.getElementById('message-input');
-        const messagesDiv = document.getElementById('messages');
-        const onlineUsersList = document.getElementById('online-users');
-        const userCountSpan = document.getElementById('user-count');
-        const currentChatTitle = document.getElementById('current-chat-title');
-
-
-        // ==================== 实用函数 ====================
-
-        function scrollToBottom() {
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function displayMessage(msg) {
-            const item = document.createElement('div');
-            item.classList.add('message-item');
-            if (msg.isPrivate) {
-                item.classList.add('private-message');
-            }
-
-            let userDisplay = msg.user;
-            let textDisplay = msg.text;
-
-            // 1. 系统消息
-            if (msg.user === 'system') {
-                item.classList.add('system-message');
-                item.innerHTML = textDisplay;
-            } 
-            // 2. 正常/私聊消息 (客户端消息过滤逻辑)
-            else {
-                const isMyMsg = msg.user === currentUsername;
-                const isRelevantToRecipient = currentRecipient === msg.user || currentRecipient === msg.recipient;
-                
-                // 过滤不属于当前聊天窗口的消息
-                if (currentRecipient !== null && !isRelevantToRecipient && !isMyMsg) return; 
-                if (currentRecipient === null && msg.isPrivate) return; 
-
-                // 私聊标签
-                let privateTag = '';
-                if (msg.isPrivate) {
-                    if (isMyMsg) {
-                        userDisplay = '你';
-                        privateTag = `<span class="private-tag">私聊给 ${msg.recipient}</span>`;
-                    } else if (msg.recipient === currentUsername) {
-                        privateTag = `<span class="private-tag">私聊</span>`;
-                    }
-                }
-                
-                item.innerHTML = `
-                    <span class="message-user">${userDisplay}</span>
-                    <span class="message-text">${textDisplay}</span>
-                    ${privateTag}
-                `;
-            }
-
-            messagesDiv.appendChild(item);
-            scrollToBottom();
-        }
-
-        function displaySystemNotification(username, action) {
-            const text = action === 'connected' ? 
-                `🟢 **${username}** 加入了聊天室。` : 
-                `🔴 **${username}** 离开了聊天室。`;
-
-            displayMessage({ user: 'system', text: text });
-        }
-        
-        /**
-         * 设置当前的聊天对象 (null 为公共聊天)
-         */
-        function setRecipient(username) {
-            if (username === currentUsername) return; // 不能私聊自己
-            currentRecipient = username;
+    <div id="modal-wrapper">
+        <div id="login-modal">
+            <span id="close-modal-btn">&times;</span> 
+            <h2 class="login-signup">poSter</h2>
             
-            // 1. 更新标题
-            currentChatTitle.textContent = username ? 
-                `当前：私聊 ${username}` : 
-                '当前：公共聊天室';
+            <div class="tab-controls">
+                <button class="tab-btn active" id="tab-login">LOGIN</button>
+                <button class="tab-btn" id="tab-signup">SIGN UP</button>
+            </div>
 
-            // 2. 清空聊天记录并显示状态消息
-            messagesDiv.innerHTML = ''; 
-            const statusText = username ? 
-                `💬 你正在和 **${username}** 私聊。` : 
-                `🌍 你回到了 **公共聊天室**。`;
-            displayMessage({ user: 'system', text: statusText });
+            <div class="tab-content">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="submit-btn">LOGIN</button>
+                    <div id="login-message" class="message"></div>
+                </form>
 
-            // 3. 更新用户列表选中状态 (手动更新 DOM)
-            const allUsersLi = onlineUsersList.querySelectorAll('li');
-            allUsersLi.forEach(li => {
-                li.classList.remove('user-selected');
-                if (li.dataset.username === username || (username === null && li.textContent.includes('公共聊天室'))) {
-                    li.classList.add('user-selected');
-                }
-            });
-        }
+                <form id="signup-form">
+                    <div class="form-group">
+                        <label for="signup-username">Username</label>
+                        <input type="text" id="signup-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm-password">Confirm Password</label>
+                        <input type="password" id="signup-confirm-password" required>
+                    </div>
+                    <button type="submit" class="submit-btn">SIGN UP</button>
+                    <div id="signup-message" class="message"></div>
+                </form>
+            </div>
 
+        </div>
+    </div>
+    <script>
+        // Get elements for initial animation
+        const title = document.getElementById('main-title');
+        const button = document.getElementById('login-btn');
+        const text = document.getElementById('login-text');
 
-        // ==================== 登录逻辑 ====================
+        // Get modal elements
+        const modalWrapper = document.getElementById('modal-wrapper');
+        const loginModal = document.getElementById('login-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        
+        // Tab and Form elements
+        const tabLoginBtn = document.getElementById('tab-login');
+        const tabSignupBtn = document.getElementById('tab-signup');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const signupMessage = document.getElementById('signup-message');
 
-        function attemptLogin() {
-            const username = usernameInput.value.trim();
-            loginError.textContent = '';
-            if (username) {
-                if (socket.connected) {
-                    // 发送 'new user' 事件到服务器
-                    socket.emit('new user', username);
-                } else {
-                    loginError.textContent = '❌ Socket 未连接，请稍后再试。';
-                }
-            } else {
-                loginError.textContent = '❌ 昵称不能为空！';
-            }
-        }
+        // Initial Fade-in Animation function
+        const animateElement = (element, delay) => {
+            setTimeout(() => {
+                element.style.opacity = '1';
+                element.style.transform = 'translateY(0)';
+            }, delay);
+        };
 
-        loginButton.addEventListener('click', attemptLogin);
+        // ------------------ Execute Initial Fade-in Animation ------------------
+        animateElement(title, 500);     
+        animateElement(button, 700);   
+        animateElement(text, 900);     
 
-        usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                attemptLogin();
+        // ------------------ Modal Control Functions ------------------
+        const openModal = () => {
+            modalWrapper.style.display = 'block'; 
+            modalWrapper.style.pointerEvents = 'auto';
+
+            setTimeout(() => {
+                loginModal.style.opacity = '1'; 
+                loginModal.style.transform = 'translate(-50%, -50%)'; 
+            }, 50); 
+        };
+
+        const closeModal = () => {
+            loginModal.style.opacity = '0';
+            loginModal.style.transform = 'translate(-50%, -40%)';
+            
+            modalWrapper.style.pointerEvents = 'none';
+
+            // Use named function to ensure proper removal
+            const handler = function() {
+                modalWrapper.style.display = 'none';
+                loginModal.removeEventListener('transitionend', handler); 
+            };
+            loginModal.addEventListener('transitionend', handler);
+        };
+        
+        // 1. Button click -> Open modal
+        button.addEventListener('click', openModal);
+
+        // 2. Close button click -> Close modal
+        closeModalBtn.addEventListener('click', closeModal);
+
+        // 3. Overlay click -> Close modal
+        modalWrapper.addEventListener('click', (event) => {
+            if (event.target.id === 'modal-wrapper') {
+                closeModal();
             }
         });
 
+        // ------------------ Tab Switch Logic (FIXED POINTER-EVENTS) ------------------
 
-        // ==================== 消息发送逻辑 ====================
-
-        messageForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const text = messageInput.value.trim();
+        const switchTab = (tabName) => {
+            // Remove 'active' class from both buttons
+            tabLoginBtn.classList.remove('active');
+            tabSignupBtn.classList.remove('active');
             
-            // 视觉反馈：空消息
-            if (!text) {
-                messageInput.focus(); 
-                messageInput.style.backgroundColor = '#fff0f0';
+            // Clear messages
+            document.getElementById('login-message').textContent = '';
+            document.getElementById('signup-message').textContent = '';
+
+            if (tabName === 'login') {
+                // Activate login tab button
+                tabLoginBtn.classList.add('active');
+
+                // Pop-off signup form
+                signupForm.style.opacity = '0';
+                signupForm.style.transform = 'scale(0.8)'; 
+                signupForm.style.pointerEvents = 'none'; // FIX: Disable input/click events
+                signupForm.style.zIndex = '5'; // FIX: Lower z-index
+
+                // Pop-in login form
                 setTimeout(() => {
-                    messageInput.style.backgroundColor = '#ffffff';
-                }, 500);
+                    loginForm.style.opacity = '1';
+                    loginForm.style.transform = 'scale(1)'; 
+                    loginForm.style.pointerEvents = 'auto'; // FIX: Enable input/click events
+                    loginForm.style.zIndex = '10'; // FIX: Raise z-index
+                }, 100); 
+
+            } else { // signup
+                // Activate signup tab button
+                tabSignupBtn.classList.add('active');
+
+                // Pop-off login form
+                loginForm.style.opacity = '0';
+                loginForm.style.transform = 'scale(0.8)'; 
+                loginForm.style.pointerEvents = 'none'; // FIX: Disable input/click events
+                loginForm.style.zIndex = '5'; // FIX: Lower z-index
+
+                // Pop-in signup form
+                setTimeout(() => {
+                    signupForm.style.opacity = '1';
+                    signupForm.style.transform = 'scale(1)'; 
+                    signupForm.style.pointerEvents = 'auto'; // FIX: Enable input/click events
+                    signupForm.style.zIndex = '10'; // FIX: Raise z-index
+                }, 100); 
+            }
+        };
+        
+        // Initial state setup (relying on JS for form styles now)
+        loginForm.style.opacity = '1';
+        loginForm.style.transform = 'scale(1)';
+        signupForm.style.opacity = '0';
+        signupForm.style.transform = 'scale(0.8)';
+
+        tabLoginBtn.addEventListener('click', () => switchTab('login'));
+        tabSignupBtn.addEventListener('click', () => switchTab('signup'));
+
+
+        // ------------------ Sign Up Form Submission Logic ------------------
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('signup-username').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            
+            signupMessage.style.color = 'black';
+            signupMessage.textContent = 'Submitting...';
+            
+            if (password !== confirmPassword) {
+                signupMessage.style.color = 'red';
+                signupMessage.textContent = '❌ Password and Confirm Password do not match!';
                 return;
             }
 
-            const msgData = { text: text };
+            try {
+                // Attempt to contact server
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
 
-            if (currentRecipient) {
-                // 私聊模式
-                msgData.recipient = currentRecipient;
-                socket.emit('private message', msgData);
-            } else {
-                // 公共聊天模式
-                socket.emit('public message', msgData);
-            }
-
-            messageInput.value = ''; // 清空输入框
-        });
-
-        // ==================== Socket.IO 事件监听 ====================
-
-        // Socket 连接成功
-        socket.on('connect', () => {
-            socketStatus.textContent = '✅ 已连接到服务器。可以登录了。';
-            loginButton.disabled = false;
-        });
-
-        // Socket 连接失败或断开
-        socket.on('disconnect', () => {
-            socketStatus.textContent = '🔴 已与服务器断开连接。';
-            loginButton.disabled = true;
-        });
-
-        socket.on('connect_error', (err) => {
-            console.error('连接错误:', err.message);
-            socketStatus.textContent = `❌ 连接服务器失败: ${err.message}`;
-            loginButton.disabled = true;
-        });
-
-
-        // [1] 服务器接受登录，进入聊天室 (这是登录成功的关键回调)
-        socket.on('user connected', (username) => {
-            // 只有当服务器确认是"我"的连接时，才切换界面
-            if (username === usernameInput.value.trim() && !currentUsername) {
-                currentUsername = username; // 设置当前用户名
-                loginOverlay.style.display = 'none'; // 隐藏登录界面
-                chatContainer.style.display = 'flex'; // 显示聊天界面
-                displayMessage({ user: 'system', text: `✨ 欢迎，**${username}**！你已成功进入聊天室。` });
-                messageInput.focus();
-            } else if (username !== currentUsername) {
-                // 其他人连接的系统通知
-                displaySystemNotification(username, 'connected');
-            }
-        });
-
-        // [1] 接收系统消息（主要用于登录失败或私聊失败的反馈）
-        socket.on('system message', (msg) => {
-            if (currentUsername) {
-                // 已登录，在聊天区显示
-                displayMessage({ user: 'system', text: msg.text });
-            } else {
-                // 未登录，在登录框显示错误
-                loginError.textContent = msg.text;
-            }
-        });
-
-        // [2] 接收公共消息
-        socket.on('public message', (msgPayload) => {
-            // isPrivate 字段在服务器端没有设置，但我们知道公共消息不是私聊
-            msgPayload.isPrivate = false; 
-            displayMessage(msgPayload);
-        });
-        
-        // [3] 接收私聊消息
-        socket.on('private message', (msgPayload) => {
-            msgPayload.isPrivate = true;
-            displayMessage(msgPayload);
-        });
-
-        // [4] 接收用户断开连接
-        socket.on('user disconnected', (username) => {
-            displaySystemNotification(username, 'disconnected');
-            // 如果私聊对象下线，则切换回公共聊天
-            if (currentRecipient === username) {
-                setRecipient(null);
-            }
-        });
-
-        // [5] 接收在线用户列表更新
-        socket.on('online users', (usernames) => {
-            onlineUsersList.innerHTML = ''; 
-            userCountSpan.textContent = usernames.length;
-
-            // 1. 添加公共聊天选项
-            const publicLi = document.createElement('li');
-            publicLi.textContent = '🌍 公共聊天室';
-            publicLi.style.fontWeight = 'bold';
-            publicLi.addEventListener('click', () => setRecipient(null));
-            if (currentRecipient === null) {
-                publicLi.classList.add('user-selected');
-            }
-            onlineUsersList.appendChild(publicLi);
-
-            // 2. 添加所有在线用户
-            usernames.forEach(user => {
-                const li = document.createElement('li');
-                li.textContent = user;
-                li.dataset.username = user;
-
-                if (user === currentUsername) {
-                    li.classList.add('user-self');
-                    li.textContent += ' (我)';
-                } else {
-                    // 绑定点击事件，用于私聊
-                    li.addEventListener('click', () => setRecipient(user));
-                }
+                const data = await response.json();
                 
-                // 标记当前私聊对象
-                if (user === currentRecipient) {
-                    li.classList.add('user-selected');
+                if (response.ok && data.success) { // Check both response status and success flag
+                    signupMessage.style.color = 'green';
+                    signupMessage.textContent = '✅ Registration successful! Please proceed to login.';
+                    
+                    // Switch to login tab
+                    setTimeout(() => {
+                        switchTab('login');
+                        document.getElementById('login-username').value = username; 
+                        document.getElementById('login-password').focus();
+                    }, 1500);
+
+                } else {
+                    signupMessage.style.color = 'red';
+                    // Use server message or a default failure message
+                    signupMessage.textContent = `❌ Registration failed: ${data.message || 'Server responded with an error.'}`; 
                 }
 
-                onlineUsersList.appendChild(li);
-            });
+            } catch (error) {
+                // Fallback for static demo (No backend)
+                console.warn('Backend not found or connection failed:', error);
+                
+                // Simulate successful signup
+                signupMessage.style.color = 'green';
+                signupMessage.textContent = '✅ (Demo Mode) Registration simulated! Redirecting to Login...';
+                
+                setTimeout(() => {
+                    switchTab('login');
+                    // 清空并预填用户名
+                    signupForm.reset(); 
+                    document.getElementById('login-username').value = username; 
+                    document.getElementById('login-password').focus();
+                }, 1500);
+            }
         });
 
+        // ------------------ Login Form Submission Logic ------------------
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const loginMessage = document.getElementById('login-message');
+            const usernameInput = document.getElementById('login-username').value.trim();
+            const passwordInput = document.getElementById('login-password').value;
+
+
+            if (!usernameInput || !passwordInput) {
+                 loginMessage.style.color = 'red';
+                 loginMessage.textContent = '❌ Please enter username and password.';
+                 return;
+            }
+
+            loginMessage.style.color = 'black';
+            loginMessage.textContent = 'Logging in...';
+
+            try {
+                // Attempt to contact server
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) { // Check both response status and success flag
+                    loginMessage.style.color = 'green';
+                    loginMessage.textContent = '✅ Login successful! Redirecting...';
+
+                    // Save Username on successful login
+                    localStorage.setItem('currentUser', usernameInput);
+
+                    // Redirect to Profile Page
+                    setTimeout(() => {
+                        // 确保 profile.html 在同一文件夹内
+                        window.location.href = 'profile.html'; 
+                    }, 1000);
+
+                } else {
+                    loginMessage.style.color = 'red';
+                    loginMessage.textContent = `❌ Login failed: ${data.message || 'Invalid credentials or server error.'}`; 
+                }
+            } catch (error) {
+                 // Fallback for static demo (No backend)
+                console.warn('Backend not found or connection failed:', error);
+
+                // Simulate successful login
+                loginMessage.style.color = 'green';
+                loginMessage.textContent = '✅ (Demo Mode) Login simulated! Redirecting...';
+
+                localStorage.setItem('currentUser', usernameInput);
+                
+                setTimeout(() => {
+                    window.location.href = 'profile.html'; 
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
