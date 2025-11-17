@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>现代化暗黑聊天室</title>
+    <title>现代化暗黑聊天室 (私聊版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         /* ------------------ 变量与基础设置 (暗黑模式) ------------------ */
         :root {
-            --color-bg-body: #121212;          /* 全局背景 (极深灰) */
-            --color-bg-card: #1e1e1e;          /* 卡片/面板背景 (深灰) */
-            --color-bg-input: #2a2a2a;         /* 输入框背景 (稍亮深灰) */
-            --color-accent: #00e676;           /* 强调色 (鲜亮绿) */
-            --color-text-primary: #e0e0e0;     /* 主文本 (亮灰) */
-            --color-text-secondary: #a0a0a0;   /* 次要文本 (中灰) */
-            --color-my-msg: #00c853;           /* 我的消息气泡 (绿) */
-            --color-other-msg: #3a3a3a;        /* 接收消息气泡 (深灰) */
-            --color-system: #616161;           /* 系统消息 (暗中灰) */
-            --color-logout: #ef5350;           /* 退出按钮 (番茄红) */
+            --color-bg-body: #121212;          
+            --color-bg-card: #1e1e1e;          
+            --color-bg-input: #2a2a2a;         
+            --color-accent: #00e676;           /* 公共强调色 (鲜亮绿) */
+            --color-dm-accent: #ff9800;        /* 私聊强调色 (橙色) */
+            --color-text-primary: #e0e0e0;     
+            --color-text-secondary: #a0a0a0;   
+            --color-my-msg: #00c853;           /* 公聊我发出的气泡 */
+            --color-other-msg: #3a3a3a;        /* 公聊我收到的气泡 */
+            --color-dm-my-msg: #5e4000;        /* 私聊我发出的气泡 (深橙) */
+            --color-dm-other-msg: #333333;     /* 私聊我收到的气泡 (深灰) */
+            --color-system: #616161;           
+            --color-logout: #ef5350;           
             --font-stack: 'Inter', sans-serif;
         }
 
@@ -31,24 +34,23 @@
             color: var(--color-text-primary);
             min-height: 100vh; 
             width: 100vw; 
-            overflow: hidden; /* 防止滚动条 */
+            overflow: hidden;
             display: flex;
             justify-content: center;
-            align-items: center; /* 垂直居中整个应用容器 */
+            align-items: center; 
         }
 
-        /* 统一的页面容器 */
         #page-wrapper {
-            display: none; /* 默认隐藏，JS 控制显示 */
+            display: none; 
             background-color: var(--color-bg-card);
             border-radius: 12px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
             max-width: 1200px;
-            width: 95%; /* 占用大部分宽度 */
-            height: 90vh; /* 占用大部分高度 */
-            overflow: hidden; /* 内部滚动由子元素控制 */
+            width: 95%; 
+            height: 90vh; 
+            overflow: hidden; 
             display: flex;
-            flex-direction: row; /* 主区域和侧边栏水平排列 */
+            flex-direction: row; 
             position: relative;
         }
         
@@ -103,14 +105,7 @@
             font-size: 1.1em;
             font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-        .auth-button:hover {
-            background-color: #00b05a;
-            transform: translateY(-2px);
-        }
-        .auth-button:active {
-            transform: translateY(0);
+            transition: background-color 0.3s ease;
         }
         
         /* ------------------ 聊天主区域 ------------------ */
@@ -119,7 +114,7 @@
             display: flex;
             flex-direction: column;
             background-color: var(--color-bg-card);
-            border-right: 1px solid rgba(255, 255, 255, 0.05); /* 分隔线 */
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         /* 聊天头部 */
@@ -133,7 +128,7 @@
             font-size: 1.1em;
             font-weight: 500;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            flex-shrink: 0; /* 防止被消息区挤压 */
+            flex-shrink: 0;
         }
         .header #current-user-display {
             display: flex;
@@ -141,9 +136,17 @@
             gap: 10px;
             color: var(--color-text-primary);
         }
-        .header #current-user-display::before {
+        /* 绿色圆点表示公共聊天 */
+        .header #current-user-display.public-mode::before {
             content: '•';
-            color: var(--color-accent);
+            color: var(--color-accent); 
+            font-size: 2em;
+            line-height: 0.5;
+        }
+        /* 橙色圆点表示私聊 */
+        .header #current-user-display.private-mode::before {
+            content: '•';
+            color: var(--color-dm-accent); 
             font-size: 2em;
             line-height: 0.5;
         }
@@ -159,69 +162,49 @@
             border: none;
             transition: background-color 0.3s ease;
         }
-        #logout-button:hover {
-            background-color: #d32f2f;
-        }
 
-        /* 消息列表 */
+        /* ------------------ 消息样式 ------------------ */
+        
         #messages { 
             list-style-type: none; 
             margin: 0; 
             padding: 20px 25px; 
             flex-grow: 1;
-            overflow-y: auto; /* 消息滚动区域 */
-            -webkit-overflow-scrolling: touch; /* 移动端滚动优化 */
+            overflow-y: auto; 
         }
-        #messages::-webkit-scrollbar {
-            width: 8px;
-        }
-        #messages::-webkit-scrollbar-track {
-            background: var(--color-bg-input);
-        }
-        #messages::-webkit-scrollbar-thumb {
-            background: var(--color-system);
-            border-radius: 4px;
-        }
-        
-        /* 消息项容器 */
         #messages li { 
             display: flex;
             margin-bottom: 12px;
             clear: both;
         }
-
-        /* 消息气泡内容区 */
         .message-bubble {
             padding: 10px 15px; 
-            border-radius: 8px; /* 统一圆角 */
+            border-radius: 8px; 
             max-width: 75%;
-            word-wrap: break-word; 
-            font-size: 0.9em;
-            line-height: 1.5;
         }
 
-        /* 接收到的消息 (左侧) */
-        .other-msg {
-            justify-content: flex-start;
-        }
-        .other-msg .message-bubble {
-            background-color: var(--color-other-msg); 
-            border-bottom-left-radius: 2px; /* 小尾巴 */
-        }
-        .other-msg .username {
-            color: var(--color-text-secondary);
-        }
+        /* 公共聊天 */
+        .other-msg.public-chat { justify-content: flex-start; }
+        .my-msg.public-chat { justify-content: flex-end; }
+        .my-msg.public-chat .message-bubble { background-color: var(--color-my-msg); border-bottom-right-radius: 2px; }
+        .other-msg.public-chat .message-bubble { background-color: var(--color-other-msg); border-bottom-left-radius: 2px; }
 
-        /* 我发送的消息 (右侧) */
-        .my-msg {
-            justify-content: flex-end; 
+        /* 私人聊天 (橙色高亮，深色气泡) */
+        .my-msg.private-chat { justify-content: flex-end; }
+        .other-msg.private-chat { justify-content: flex-start; }
+        .my-msg.private-chat .message-bubble { 
+            background-color: var(--color-dm-my-msg); 
+            border: 1px solid var(--color-dm-accent);
+            border-bottom-right-radius: 2px;
         }
-        .my-msg .message-bubble {
-            background-color: var(--color-my-msg); 
-            border-bottom-right-radius: 2px; /* 小尾巴 */
+        .other-msg.private-chat .message-bubble { 
+            background-color: var(--color-dm-other-msg); 
+            border: 1px solid var(--color-system);
+            border-bottom-left-radius: 2px; 
         }
-        .my-msg .username {
-            color: var(--color-accent); 
+        .private-chat .username {
+            color: var(--color-dm-accent) !important; 
+            font-weight: 600;
         }
 
         /* 消息头部 */
@@ -234,6 +217,7 @@
         .username {
             font-weight: 500;
             font-size: 0.75em;
+            color: var(--color-text-secondary);
         }
         .timestamp {
             font-size: 0.6em;
@@ -249,7 +233,7 @@
             background-color: rgba(255, 255, 255, 0.05);
             padding: 8px 15px;
             border-radius: 6px;
-            margin: 10px auto; /* 居中 */
+            margin: 10px auto; 
             font-size: 0.75em;
             width: fit-content;
             max-width: 90%;
@@ -271,15 +255,10 @@
             border: 1px solid var(--color-system); 
             padding: 12px 18px; 
             flex-grow: 1; 
-            border-radius: 25px; /* 更圆润 */
+            border-radius: 25px; 
             font-size: 0.95em;
-            background-color: var(--color-bg-card); /* 输入框背景 */
+            background-color: var(--color-bg-card); 
             color: var(--color-text-primary);
-            transition: border-color 0.3s ease;
-        }
-        #input:focus {
-            border-color: var(--color-accent);
-            outline: none;
         }
         #form > button { 
             background: var(--color-accent); 
@@ -291,48 +270,19 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 0.95em;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-        #form > button:hover {
-            background-color: #00b05a;
-            transform: translateY(-2px);
-        }
-        #form > button:active {
-            transform: translateY(0);
         }
         
         /* ------------------ 侧边栏：在线用户 ------------------ */
-        #sidebar-toggle {
-            display: none; /* 默认隐藏，在移动端显示 */
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: var(--color-accent);
-            color: var(--color-bg-body);
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9em;
-            z-index: 150; /* 确保在其他元素之上 */
-            transition: background-color 0.3s ease;
-        }
-        #sidebar-toggle:hover {
-            background-color: #00b05a;
-        }
-
         #online-users {
             width: 250px; 
             min-width: 250px;
-            height: 100%; /* 占满父容器高度 */
+            height: 100%; 
             background: var(--color-bg-secondary);
             padding: 20px 15px;
-            display: flex; /* 内部flex布局 */
+            display: flex; 
             flex-direction: column;
             border-left: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.3s ease-in-out; /* 用于移动端滑入滑出 */
-            flex-shrink: 0; /* 防止被挤压 */
+            flex-shrink: 0; 
         }
         #online-users h4 {
             color: var(--color-accent);
@@ -351,12 +301,31 @@
             font-size: 1.5em;
             line-height: 0.5;
         }
+        /* 公共聊天按钮 */
+        #public-chat-btn {
+            background-color: var(--color-bg-input);
+            color: var(--color-accent);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--color-accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        #public-chat-btn.active {
+            background-color: var(--color-accent);
+            color: var(--color-bg-body);
+        }
+        #public-chat-btn:hover:not(.active) {
+            background-color: rgba(0, 230, 118, 0.1);
+        }
+
         #user-list {
             list-style: none;
             padding: 0;
-            flex-grow: 1; /* 占据剩余空间 */
-            overflow-y: auto; /* 用户列表可滚动 */
-            -webkit-overflow-scrolling: touch;
+            flex-grow: 1; 
+            overflow-y: auto; 
         }
         #user-list li {
             padding: 8px 0;
@@ -364,10 +333,17 @@
             color: var(--color-text-primary);
             position: relative;
             padding-left: 15px;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.03); /* 虚线分隔 */
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.03); 
+            cursor: pointer; /* 可点击 */
+            transition: background-color 0.2s;
         }
-        #user-list li:last-child {
-            border-bottom: none;
+        #user-list li:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        #user-list li.current-dm {
+            background-color: rgba(255, 152, 0, 0.2); /* 当前私聊对象高亮 */
+            border-left: 3px solid var(--color-dm-accent);
+            padding-left: 12px;
         }
         #user-list li::before {
             content: '•';
@@ -380,50 +356,22 @@
             transform: translateY(-50%);
         }
 
-        /* 移动端侧边栏的关闭按钮 */
-        #sidebar-close-btn {
-            display: none; /* 默认隐藏 */
-            background: var(--color-logout);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 6px;
-            margin-top: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            border: none;
-            transition: background-color 0.3s ease;
-        }
-        #sidebar-close-btn:hover {
-            background-color: #d32f2f;
-        }
-
-
         /* ======================================================== */
-        /* 适配手机/小屏幕 (宽度小于 900px 时) */
+        /* 适配手机/小屏幕 */
         /* ======================================================== */
         @media (max-width: 900px) {
-            body {
-                align-items: stretch; /* 适应移动端，不再垂直居中 */
-            }
-            #page-wrapper {
-                width: 100vw;
-                height: 100vh;
-                border-radius: 0; /* 全屏无圆角 */
-                box-shadow: none;
-            }
-            #chat-main-area {
-                border-right: none;
-                flex-grow: 1;
-            }
+            body { align-items: stretch; }
+            #page-wrapper { width: 100vw; height: 100vh; border-radius: 0; box-shadow: none; }
+            #chat-main-area { border-right: none; flex-grow: 1; }
 
-            /* 隐藏在线用户侧边栏，通过按钮控制 */
+            /* 移动端侧边栏滑出效果 */
             #online-users {
                 position: fixed;
                 right: 0;
                 top: 0;
                 height: 100vh;
                 transform: translateX(100%); /* 默认滑出屏幕 */
-                z-index: 1000; /* 确保在最上层 */
+                z-index: 1000; 
                 box-shadow: -5px 0 15px rgba(0, 0, 0, 0.4);
             }
             #online-users.active {
@@ -433,42 +381,45 @@
             /* 移动端显示侧边栏切换按钮 */
             #sidebar-toggle {
                 display: block;
-                top: 15px; /* 调整位置 */
+                position: absolute;
+                top: 15px; 
                 right: 15px;
+                background-color: var(--color-accent);
+                color: var(--color-bg-body);
+                border: none;
                 padding: 8px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
                 font-size: 0.8em;
+                z-index: 150;
             }
             #sidebar-toggle.chat-active {
-                 right: auto; /* 当 chat-container 显示时，放在左上角 */
+                 right: auto;
                  left: 15px;
-                 background-color: var(--color-bg-card); /* 与头部颜色匹配 */
+                 background-color: var(--color-bg-card);
                  color: var(--color-accent);
                  border: 1px solid rgba(255,255,255,0.1);
                  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             }
-            #sidebar-toggle.chat-active:hover {
-                background-color: var(--color-bg-input);
-            }
 
-            /* 移动端登录容器 */
-            #auth-container {
-                max-width: 90%;
-                padding: 30px;
-            }
-
-            /* 头部退出按钮与侧边栏切换按钮位置冲突 */
-            .header #logout-button {
-                display: none; /* 在移动端隐藏主界面的退出按钮 */
-            }
-            /* 侧边栏内部显示退出按钮 */
-            #online-users #sidebar-close-btn {
+            .header #logout-button { display: none; } /* 移动端隐藏主界面的退出按钮 */
+            #online-users #sidebar-close-btn { 
                 display: block; /* 移动端侧边栏内显示关闭按钮 */
+                background: var(--color-logout);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 6px;
+                margin-top: 20px;
+                cursor: pointer;
+                font-weight: 600;
+                border: none;
+                text-align: center;
             }
             
-            .message-bubble {
-                max-width: 80%; /* 消息气泡在小屏幕上更宽 */
-            }
+            .message-bubble { max-width: 80%; }
         }
+
     </style>
 </head>
 <body>
@@ -483,9 +434,10 @@
         </form>
     </div>
     
-    <button id="sidebar-toggle">在线用户</button>
+    <button id="sidebar-toggle" style="display: none;">在线用户</button>
 
     <div id="page-wrapper" style="display: none;">
+        
         <div id="chat-main-area">
             <div class="header">
                 <span id="current-user-display"></span>
@@ -504,26 +456,28 @@
         
         <div id="online-users">
             <h4>🟢 在线用户 (<span id="user-count">0</span>)</h4>
+            <button id="public-chat-btn">切换到公共聊天</button> 
             <ul id="user-list"></ul>
-            <button id="sidebar-close-btn">关闭侧边栏</button>
+            <button id="sidebar-close-btn" style="display: none;">关闭侧边栏</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-        // ------------------ JS 核心逻辑 ------------------
+        // ------------------ 变量初始化 ------------------
         let socket = null;
         let username = '';
-        const LOCAL_CHAT_KEY = 'chat_messages_local'; 
+        // 核心私聊状态：如果为 null，则在公共聊天模式
+        let currentRecipient = null; 
+
+        const PUBLIC_CHAT_KEY = 'chat_messages_public'; // 公共聊天的历史记录键
         const USERNAME_KEY = 'chat_username'; 
         
-        // 认证元素
+        // UI 元素
         const authContainer = document.getElementById('auth-container');
         const authForm = document.getElementById('auth-form');
         const usernameInput = document.getElementById('username-input');
-        
-        // 聊天元素
         const pageWrapper = document.getElementById('page-wrapper');
         const chatMainArea = document.getElementById('chat-main-area');
         const messages = document.getElementById('messages');
@@ -536,6 +490,7 @@
         const onlineUsersSidebar = document.getElementById('online-users');
         const sidebarToggleBtn = document.getElementById('sidebar-toggle');
         const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+        const publicChatBtn = document.getElementById('public-chat-btn');
 
 
         // ------------------ 辅助函数 ------------------
@@ -547,43 +502,55 @@
             return `${h}:${m}:${s}`;
         }
 
+        // 仅保存公共聊天历史记录 (私聊不进行本地持久化，以简化逻辑)
         function saveMessageToLocal(msgData) {
-            if (!msgData.user && msgData.text.startsWith('📢') || msgData.text.startsWith('⚠️') || msgData.text.startsWith('🔴')) return;
+            if (msgData.isPrivate) return;
+
+            if (!msgData.user && (msgData.text.includes('连接') || msgData.text.includes('上线') || msgData.text.includes('下线'))) return;
             
-            let currentMessages = JSON.parse(localStorage.getItem(LOCAL_CHAT_KEY)) || [];
+            let currentMessages = JSON.parse(localStorage.getItem(PUBLIC_CHAT_KEY)) || [];
             currentMessages.push({
                 user: msgData.user || 'system',
                 text: msgData.text,
                 timestamp: msgData.timestamp || new Date().toISOString(),
+                isPrivate: false 
             });
             if (currentMessages.length > 50) {
                 currentMessages = currentMessages.slice(currentMessages.length - 50);
             }
-            localStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(currentMessages));
+            localStorage.setItem(PUBLIC_CHAT_KEY, JSON.stringify(currentMessages));
         }
 
+        // 加载公共聊天历史记录
         function loadMessagesFromLocal() {
             messages.innerHTML = ''; 
-            let storedMessages = JSON.parse(localStorage.getItem(LOCAL_CHAT_KEY));
+            let storedMessages = JSON.parse(localStorage.getItem(PUBLIC_CHAT_KEY));
             if (storedMessages && storedMessages.length > 0) {
                 storedMessages.forEach(msgData => {
                     let messageType;
-                    // 更精确地判断系统消息
-                    if (msgData.user === 'system' || msgData.text.includes('连接') || msgData.text.includes('上线') || msgData.text.includes('下线')) {
+                    if (msgData.user === 'system' || msgData.text.includes('连接') || msgData.text.includes('上线') || msgData.text.includes('下线') || msgData.text.includes('无法发送')) {
                         messageType = 'system';
                     } else if (msgData.user === username) {
                         messageType = 'my';
                     } else {
                         messageType = 'other';
                     }
-                    addMessage(msgData, messageType, false);
+                    // 标记为非私聊
+                    addMessage(msgData, messageType, false, false); 
                 });
             }
         }
         
-        function addMessage(msgData, type, saveToLocal = true) {
+        /**
+         * 显示消息到聊天窗口
+         * @param {Object} msgData - 消息数据 (user, text, timestamp)
+         * @param {string} type - 'my', 'other', or 'system'
+         * @param {boolean} saveToLocal - 是否保存到本地 (公共聊天专用)
+         * @param {boolean} isPrivate - 是否是私聊消息 (影响样式)
+         */
+        function addMessage(msgData, type, saveToLocal = true, isPrivate = false) {
             const item = document.createElement('li');
-            
+
             if (type === 'system') {
                 item.className = 'system-msg';
                 item.textContent = msgData.text;
@@ -604,9 +571,11 @@
                 
                 bubble.innerHTML = `${headerHtml}${msgData.text}`;
                 item.appendChild(bubble);
-                item.className = type === 'my' ? 'my-msg' : 'other-msg';
                 
-                if (saveToLocal) {
+                item.className = type === 'my' ? 'my-msg' : 'other-msg';
+                item.classList.add(isPrivate ? 'private-chat' : 'public-chat');
+
+                if (saveToLocal && !isPrivate) { 
                     saveMessageToLocal(msgData);
                 }
             }
@@ -618,7 +587,7 @@
             userList.innerHTML = '';
             userCountSpan.textContent = users.length;
             
-            // 确保当前用户在列表里且排在前面
+            // 当前用户排在前面
             const sortedUsers = [...users].sort((a, b) => {
                 if (a === username) return -1;
                 if (b === username) return 1;
@@ -628,25 +597,85 @@
             sortedUsers.forEach(user => {
                 const li = document.createElement('li');
                 li.textContent = user + (user === username ? ' (我)' : '');
+                li.dataset.username = user; // 存储用户名，用于点击事件
+                
+                // 如果是当前私聊对象，高亮
+                if (user === currentRecipient) {
+                    li.classList.add('current-dm');
+                }
                 userList.appendChild(li);
             });
+
+            // 如果当前私聊对象不在列表中，强制切回公共模式
+            if (currentRecipient && !users.includes(currentRecipient)) {
+                addMessage({ text: `⚠️ 你的私聊对象 ${currentRecipient} 已离线，自动切换回公共聊天模式。` }, 'system');
+                switchChatMode(null);
+            }
         }
 
 
-        // ------------------ 状态管理 ------------------
+        // ------------------ 聊天模式切换逻辑 ------------------
+
+        /**
+         * 切换聊天模式 (公共/私人)
+         * @param {string|null} recipientName - 私聊对象名称，null 表示公共聊天
+         */
+        function switchChatMode(recipientName = null) {
+            currentRecipient = recipientName;
+            messages.innerHTML = ''; // 清空当前消息
+
+            // 更新 UI 状态
+            publicChatBtn.classList.remove('active');
+            currentUserDisplay.classList.remove('public-mode', 'private-mode');
+            
+            // 移除所有用户的 DM 高亮
+            userList.querySelectorAll('li').forEach(li => li.classList.remove('current-dm'));
+
+
+            if (currentRecipient) {
+                // 私聊模式
+                currentUserDisplay.textContent = `私聊对象: ${currentRecipient}`;
+                currentUserDisplay.classList.add('private-mode');
+                input.placeholder = `私聊给 ${currentRecipient}...`;
+                
+                // 找到侧边栏中对应的用户并高亮
+                Array.from(userList.querySelectorAll('li')).find(li => 
+                    li.dataset.username === currentRecipient
+                )?.classList.add('current-dm');
+
+                addMessage({ text: `📢 你已切换到私聊模式，当前对象是：${currentRecipient}` }, 'system');
+                
+            } else {
+                // 公共聊天模式
+                currentUserDisplay.textContent = `公共聊天室 (${username})`;
+                currentUserDisplay.classList.add('public-mode');
+                input.placeholder = `输入您的消息...`;
+                publicChatBtn.classList.add('active');
+
+                // 加载公共聊天历史记录
+                loadMessagesFromLocal();
+            }
+
+            // 移动端关闭侧边栏
+            if (window.innerWidth <= 900) {
+                onlineUsersSidebar.classList.remove('active');
+            }
+        }
+
+
+        // ------------------ 状态管理与事件 ------------------
 
         function handleSuccessfulLogin() {
             authContainer.style.display = 'none';
             pageWrapper.style.display = 'flex'; 
-            chatMainArea.style.display = 'flex'; // 确保 chatMainArea 是 flex 布局
-            currentUserDisplay.textContent = `聊天室 (${username})`;
+            chatMainArea.style.display = 'flex';
             
-            // 为移动端侧边栏切换按钮添加类
             if (window.innerWidth <= 900) {
                 sidebarToggleBtn.classList.add('chat-active');
             }
 
-            loadMessagesFromLocal();
+            // 默认进入公共聊天模式
+            switchChatMode(null); 
             
             socket = io(); 
             
@@ -655,10 +684,31 @@
                 addMessage({ text: `📢 你已连接。` }, 'system');
             });
             
-            socket.on('chat message', function(msgData) {
-                const type = msgData.user === username ? 'my' : 'other';
-                addMessage(msgData, type);
+            // 接收公共聊天消息
+            socket.on('public message', function(msgData) {
+                // 只有在公共模式下才显示
+                if (!currentRecipient) {
+                    const type = msgData.user === username ? 'my' : 'other';
+                    addMessage(msgData, type, true, false); 
+                }
             });
+
+            // 接收私人聊天消息
+            socket.on('private message', function(msgData) {
+                const isFromMe = msgData.user === username;
+                // 私聊对象是自己发的给别人，或别人发的给自己
+                const recipient = isFromMe ? msgData.recipient : msgData.user;
+                
+                // 检查消息是否与当前模式相关联
+                if (recipient === currentRecipient) {
+                    const type = isFromMe ? 'my' : 'other';
+                    addMessage(msgData, type, false, true); // 私聊不保存本地
+                } else {
+                    // 如果不在当前私聊对象界面，给一个通知 (系统消息)
+                    addMessage({ text: `📢 收到来自 ${msgData.user} 的私聊消息：${msgData.text.substring(0, 20)}...` }, 'system');
+                }
+            });
+
 
             socket.on('online users', updateOnlineList);
 
@@ -672,11 +722,11 @@
                 addMessage({ text: `⚠️ ${user} 下线。` }, 'system');
             });
             
-            socket.on('disconnect', () => addMessage({ text: '🔴 连接断开。' }, 'system'));
+            socket.on('disconnect', () => {
+                addMessage({ text: '🔴 连接断开。' }, 'system');
+                currentRecipient = null; 
+            });
         }
-
-        logoutButton.addEventListener('click', () => handleLogout());
-        sidebarCloseBtn.addEventListener('click', () => handleLogout());
 
         function handleLogout() {
             if (socket) {
@@ -691,17 +741,18 @@
             
             usernameInput.value = '';
             username = '';
+            currentRecipient = null;
             updateOnlineList([]);
             
-            // 移除移动端侧边栏切换按钮的类
             sidebarToggleBtn.classList.remove('chat-active');
-            // 确保侧边栏隐藏
             onlineUsersSidebar.classList.remove('active');
         }
 
-
-        // ------------------ 事件监听 ------------------
-
+        // 绑定事件
+        logoutButton.addEventListener('click', () => handleLogout());
+        sidebarCloseBtn.addEventListener('click', () => handleLogout());
+        
+        // 昵称登录
         authForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const inputName = usernameInput.value.trim();
@@ -712,18 +763,49 @@
             }
         });
 
+        // 消息发送处理器 (根据 currentRecipient 决定发送 public 还是 private)
         form.addEventListener('submit', function(e) {
             e.preventDefault(); 
             const messageText = input.value.trim();
             
             if (messageText && socket && socket.connected) {
-                socket.emit('chat message', { text: messageText });
+                if (currentRecipient) {
+                    // 私聊模式
+                    socket.emit('private message', { 
+                        text: messageText, 
+                        recipient: currentRecipient 
+                    });
+                } else {
+                    // 公共模式
+                    socket.emit('public message', { 
+                        text: messageText 
+                    });
+                }
                 input.value = ''; 
             } else if (messageText) {
-                 addMessage({ text: '🔴 无法发送：连接断开。' }, 'system');
+                 addMessage({ text: '🔴 无法发送：连接断开或未登录。' }, 'system');
             }
         });
 
+        // 点击公共聊天按钮
+        publicChatBtn.addEventListener('click', () => switchChatMode(null));
+
+        // 点击在线用户列表 (使用事件委托)
+        userList.addEventListener('click', function(e) {
+            let li = e.target.closest('li');
+            if (li && li.dataset.username) {
+                const targetUser = li.dataset.username;
+                
+                if (targetUser === username) {
+                    alert('不能和自己私聊。');
+                    return;
+                }
+
+                switchChatMode(targetUser);
+            }
+        });
+
+        // 自动登录
         document.addEventListener('DOMContentLoaded', () => {
             const storedUsername = localStorage.getItem(USERNAME_KEY);
             if (storedUsername) {
@@ -745,22 +827,21 @@
             onlineUsersSidebar.classList.remove('active');
         });
 
-        // 监听窗口大小变化，调整侧边栏行为
         window.addEventListener('resize', () => {
-            if (window.innerWidth > 900) {
-                onlineUsersSidebar.classList.remove('active'); // 桌面模式下隐藏移动侧边栏
-                sidebarToggleBtn.style.display = 'none'; // 桌面模式下隐藏切换按钮
+            const isMobile = window.innerWidth <= 900;
+            if (!isMobile) {
+                onlineUsersSidebar.classList.remove('active'); 
+                sidebarToggleBtn.style.display = 'none'; 
             } else {
-                sidebarToggleBtn.style.display = 'block'; // 移动模式下显示切换按钮
-                // 如果聊天主区域是可见的，给切换按钮添加chat-active类
+                // 只有在已登录状态才显示切换按钮
                 if (pageWrapper.style.display === 'flex') {
+                    sidebarToggleBtn.style.display = 'block';
                     sidebarToggleBtn.classList.add('chat-active');
+                    sidebarCloseBtn.style.display = 'block';
                 }
             }
         });
-        // 首次加载时也检查一次
         window.dispatchEvent(new Event('resize'));
-
     </script>
 </body>
 </html>
